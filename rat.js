@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const API_BASE_URL = 'http://api.milabs.xyz/v1/rat';
-const MAZE_ID = 'Practice1';
+const MAZE_ID = 'Practice4';
 const options = {
     headers: {
         'X-API-KEY': '3B539A2AC8A34CFB',
@@ -44,6 +44,7 @@ async function move(direction) {
 async function dfs() {
     const visited = new Set();
     const stack = [{ x: 0, y: 0, path: [] }];
+    let currentX = 0, currentY = 0;
 
     while (stack.length > 0) {
         const { x, y, path } = stack.pop();
@@ -51,6 +52,29 @@ async function dfs() {
 
         if (visited.has(key)) continue;
         visited.add(key);
+
+        // Backtrack if necessary
+        while (path.length < currentX + currentY) {
+            const lastMove = path[path.length - 1];
+            switch (lastMove) {
+                case 'north': await move('south'); currentY++; break;
+                case 'south': await move('north'); currentY--; break;
+                case 'east': await move('west'); currentX--; break;
+                case 'west': await move('east'); currentX++; break;
+            }
+        }
+
+        // Move to the new cell if it's not the starting position
+        if (path.length > 0) {
+            const nextMove = path[path.length - 1];
+            await move(nextMove);
+            switch (nextMove) {
+                case 'north': currentY--; break;
+                case 'south': currentY++; break;
+                case 'east': currentX++; break;
+                case 'west': currentX--; break;
+            }
+        }
 
         let surroundings;
         try {
@@ -65,8 +89,7 @@ async function dfs() {
                 console.log('Found the exit!');
                 return [...path, direction];
             }
-
-            if (status === 'Open' || status === 'Cheese') {
+            if (status === 'Open') {
                 let newX = x, newY = y;
                 switch (direction) {
                     case 'north': newY--; break;
@@ -74,21 +97,11 @@ async function dfs() {
                     case 'east': newX++; break;
                     case 'west': newX--; break;
                 }
-
                 stack.push({
                     x: newX,
                     y: newY,
                     path: [...path, direction]
                 });
-            }
-        }
-
-        if (path.length > 0) {
-            try {
-                await move(path[path.length - 1]);
-            } catch (error) {
-                console.error('Failed to move, retrying...');
-                continue;
             }
         }
     }
